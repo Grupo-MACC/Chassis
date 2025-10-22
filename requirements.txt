@@ -1,0 +1,8 @@
+setuptools
+wheel
+twine
+PyJWT
+fastapi
+cryptography
+sqlalchemy
+aio_pika
