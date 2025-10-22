@@ -1,17 +1,19 @@
 name: Build and Publish to GitHub Packages
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [created]   # Se ejecuta al crear un release
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # Necesario para poder publicar paquetes
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,16 +23,14 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r requirements.txt
           pip install setuptools wheel twine
 
       - name: Build package
         run: python setup.py sdist bdist_wheel
 
-      - name: Publish to GitHub Packages
+      - name: Publish package as Release asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          python -m twine upload \
-            --repository-url https://api.github.com/orgs/Grupo-MACC/packages/pypi/upload dist/*
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
