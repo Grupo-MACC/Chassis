@@ -33,4 +33,4 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python -m twine upload \
-            --repository-url https://upload.github.com/Grupo-MACC/Chassis/packages dist/*
+            --repository-url https://upload.pypi.org/legacy/ dist/*
