@@ -9,7 +9,7 @@ auth_scheme = HTTPBearer()
 # Database #########################################################################################
 async def get_db():
     """Generates database sessions and closes them when finished."""
-    from sql.database import SessionLocal
+    from microservice_chassis_grupo2.sql.database import SessionLocal
     logger.debug("Getting database SessionLocal")
     db = SessionLocal()
     try:
