@@ -1,7 +1,7 @@
 import jwt
 import os
 from fastapi import HTTPException
-#from config import settings
+from microservice_chassis_grupo2.core.config import settings
 
 PUBLIC_KEY_PATH = "/home/pyuser/code/auth_public.pem"
 
@@ -16,7 +16,7 @@ def read_public_pem():
 def decode_token(token: str) -> dict:
     try:
         public_pem = read_public_pem()
-        payload = jwt.decode(token, public_pem, algorithms=["RS256"])
+        payload = jwt.decode(token, public_pem, algorithms=[settings.ALGORITHM])
         return payload
     except FileNotFoundError as e:
         raise HTTPException(status_code=500, detail="Public key file not found")

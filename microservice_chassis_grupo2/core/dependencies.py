@@ -1,7 +1,7 @@
 import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from security import decode_token
+from microservice_chassis_grupo2.core.security import decode_token
 
 logger = logging.getLogger(__name__)
 auth_scheme = HTTPBearer()

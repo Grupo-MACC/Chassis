@@ -1,6 +1,6 @@
 from sqlalchemy import Column, DateTime
 from sqlalchemy.sql import func
-from .database import Base
+from microservice_chassis_grupo2.sql.database import Base
 
 class BaseModel(Base):
     """Base database table representation to reuse."""
