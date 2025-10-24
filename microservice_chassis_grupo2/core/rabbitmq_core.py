@@ -10,7 +10,7 @@ async def get_channel():
     return connection, channel
 
 async def declare_exchange(channel):
-    exchange = channel.declare_exchange(
+    exchange = await channel.declare_exchange(
         settings.EXCHANGE_NAME,
         ExchangeType.TOPIC,
         durable=True
