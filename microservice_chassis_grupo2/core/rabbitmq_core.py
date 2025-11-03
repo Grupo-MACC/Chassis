@@ -17,3 +17,21 @@ async def declare_exchange(channel):
     )
 
     return exchange
+
+async def declare_exchange_command(channel):
+    exchange = await channel.declare_exchange(
+        settings.EXCHANGE_COMMAND_NAME,
+        ExchangeType.TOPIC,
+        durable=True
+    )
+
+    return exchange
+
+async def declare_exchange_saga(channel):
+    exchange = await channel.declare_exchange(
+        settings.EXCHANGE_SAGA_NAME,
+        ExchangeType.TOPIC,
+        durable=True
+    )
+
+    return exchange
