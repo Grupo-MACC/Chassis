@@ -3,7 +3,8 @@ import os
 from fastapi import HTTPException
 from microservice_chassis_grupo2.core.config import settings
 
-PUBLIC_KEY_PATH = "/home/pyuser/code/auth_public.pem"
+#"/home/pyuser/code/auth_public.pem"
+PUBLIC_KEY_PATH = os.getenv("PUBLIC_KEY_PATH", "auth_public.pem")
 
 def read_public_pem():
     if not os.path.exists(PUBLIC_KEY_PATH):
