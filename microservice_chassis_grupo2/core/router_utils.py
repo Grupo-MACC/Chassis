@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """Util/Helper functions for router definitions."""
 import logging
+import os
 from fastapi import HTTPException
 
-ORDER_SERVICE_URL = "https://order:5000"
-MACHINE_SERVICE_URL = "https://machine:5001"
-DELIVERY_SERVICE_URL = "https://delivery:5002"
-PAYMENT_SERVICE_URL = "https://payment:5003"
-AUTH_SERVICE_URL = "https://auth:5004"
+ORDER_SERVICE_URL = f"https://{os.getenv("ORDER_SERVICE", "locahost")}:5000"
+MACHINE_SERVICE_URL = f"https://{os.getenv("MACHINE_SERVICE", "locahost")}:5001"
+DELIVERY_SERVICE_URL = f"https://{os.getenv("DELIVERY_SERVICE", "locahost")}:5002"
+PAYMENT_SERVICE_URL = f"https://{os.getenv("PAYMENT_SERVICE", "locahost")}:5003"
+AUTH_SERVICE_URL = f"https://{os.getenv("AUTH_SERVICE", "locahost")}:5004"
 
 logger = logging.getLogger(__name__)
 
