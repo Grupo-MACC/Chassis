@@ -1,7 +1,8 @@
 import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from microservice_chassis_grupo2.core.security import decode_token
+from microservice_chassis_grupo2.core.security import decode_token, PUBLIC_KEY_PATH
+import os
 
 logger = logging.getLogger(__name__)
 auth_scheme = HTTPBearer()
@@ -38,3 +39,11 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token inválido")
     
     return user_id
+
+def check_public_key():
+    if os.path.exists(PUBLIC_KEY_PATH):
+        with open(PUBLIC_KEY_PATH, "r", encoding="utf-8") as f:
+            f.read()
+        return True
+    else:
+        return False
