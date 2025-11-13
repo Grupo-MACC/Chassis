@@ -37,3 +37,12 @@ async def declare_exchange_saga(channel):
     )
 
     return exchange
+
+async def declare_exchange_logs(channel):
+    exchange = await channel.declare_exchange(
+        settings.EXCHANGE_LOGS_NAME,
+        ExchangeType.TOPIC,
+        durable=True
+    )
+
+    return exchange
