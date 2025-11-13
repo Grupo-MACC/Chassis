@@ -40,7 +40,7 @@ async def declare_exchange_saga(channel):
 
 async def declare_exchange_logs(channel):
     exchange = await channel.declare_exchange(
-        settings.EXCHANGE_LOGS_NAME,
+        settings.EXCHANGE_NAME_LOGS,
         ExchangeType.TOPIC,
         durable=True
     )

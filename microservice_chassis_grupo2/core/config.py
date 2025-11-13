@@ -6,6 +6,6 @@ class Settings():
     EXCHANGE_NAME = "broker"
     EXCHANGE_NAME_COMMAND = "command"
     EXCHANGE_NAME_SAGA = "saga"
-    EXCHANGE_NAME_SAGA = "logs"
+    EXCHANGE_NAME_LOGS = "logs"
 
 settings = Settings()
