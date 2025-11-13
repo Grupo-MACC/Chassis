@@ -22,7 +22,7 @@ async def declare_exchange(channel):
 
 async def declare_exchange_command(channel):
     exchange = await channel.declare_exchange(
-        settings.EXCHANGE_COMMAND_NAME,
+        settings.EXCHANGE_NAME_COMMAND,
         ExchangeType.TOPIC,
         durable=True
     )
@@ -31,7 +31,7 @@ async def declare_exchange_command(channel):
 
 async def declare_exchange_saga(channel):
     exchange = await channel.declare_exchange(
-        settings.EXCHANGE_SAGA_NAME,
+        settings.EXCHANGE_NAME_SAGA,
         ExchangeType.TOPIC,
         durable=True
     )
