@@ -44,5 +44,10 @@ async def declare_exchange_logs(channel):
         ExchangeType.TOPIC,
         durable=True
     )
+    queue = await channel.declare_queue(
+        "telegraf_metrics",
+        durable=True
+    )
+    await queue.bind(exchange, routing_key="#")
 
     return exchange
