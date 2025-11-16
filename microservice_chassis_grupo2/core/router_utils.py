@@ -4,11 +4,11 @@ import logging
 import os
 from fastapi import HTTPException
 
-ORDER_SERVICE_URL = f"{os.getenv("ORDER_SERVICE", "http://localhost")}:5000"
-MACHINE_SERVICE_URL = f"{os.getenv("MACHINE_SERVICE", "http://localhost")}:5001"
-DELIVERY_SERVICE_URL = f"{os.getenv("DELIVERY_SERVICE", "http://localhost")}:5002"
-PAYMENT_SERVICE_URL = f"{os.getenv("PAYMENT_SERVICE", "http://localhost")}:5003"
-AUTH_SERVICE_URL = f"{os.getenv("AUTH_SERVICE", "http://localhost")}:5004"
+ORDER_SERVICE_URL = f"{os.getenv('ORDER_SERVICE', 'http://localhost')}:5000"
+MACHINE_SERVICE_URL = f"{os.getenv('MACHINE_SERVICE', 'http://localhost')}:5001"
+DELIVERY_SERVICE_URL = f"{os.getenv('DELIVERY_SERVICE', 'http://localhost')}:5002"
+PAYMENT_SERVICE_URL = f"{os.getenv('PAYMENT_SERVICE', 'http://localhost')}:5003"
+AUTH_SERVICE_URL = f"{os.getenv('AUTH_SERVICE', 'http://localhost')}:5004"
 
 logger = logging.getLogger(__name__)
 
