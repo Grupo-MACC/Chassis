@@ -66,14 +66,30 @@ Base = declarative_base()
 _db_initialized = False
 
 async def init_database():
-    """Initialize database connection."""
     global engine, SessionLocal, _db_initialized
-    
+
     print("[DATABASE] init_database() called")
-    
+
     if _db_initialized:
         print("[DATABASE] Database already initialized")
         return
-    
+
     database_url = await get_database_url()
-    print(f"[DATABASE] Creating engine with URL (password hidden): {database_url.split('@')[0].split(':')[0]}://***@{database_url.split('@')[1].split('/')[0]}")
+
+    print("[DATABASE] Creating engine...")
+
+    engine = create_async_engine(
+        database_url,
+        echo=False,
+        pool_pre_ping=True,
+        future=True,
+    )
+
+    SessionLocal = sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+
+    _db_initialized = True
+    print("[DATABASE] Engine and session created successfully")
