@@ -7,6 +7,8 @@ SQLALCHEMY_DATABASE_URL = os.getenv(
     "sqlite+aiosqlite:///./default.db"
 )
 
+
+
 engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False},
