@@ -64,15 +64,18 @@ engine = None
 SessionLocal = None
 Base = declarative_base()
 _db_initialized = False
+_init_lock = asyncio.Lock()
 
 async def init_database():
+    """Inicializa engine y SessionLocal (idempotente y thread-safe async)."""
     global engine, SessionLocal, _db_initialized
 
-    print("[DATABASE] init_database() called")
-
     if _db_initialized:
-        print("[DATABASE] Database already initialized")
         return
+
+    async with _init_lock:
+        if _db_initialized:
+            return
 
     database_url = await get_database_url()
 
