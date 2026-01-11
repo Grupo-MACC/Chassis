@@ -1,0 +1,36 @@
+# Publica a PyPI cuando se empuja un tag tipo v0.1.5rc1
+name: Publish (tags)
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build package
+        run: |
+          # Construye wheel/sdist del paquete
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Upload to PyPI
+        env:
+          # Usuario especial para token en PyPI
+          TWINE_USERNAME: __token__
+          # Asegúrate de que este secret existe en el repo
+          TWINE_PASSWORD: ${{ secrets.PYPI }}
+        run: |
+          # Sube los artefactos a PyPI
+          python -m pip install --upgrade twine
+          twine upload dist/*
