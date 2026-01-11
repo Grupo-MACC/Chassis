@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="microservice_chassis_grupo2_cc",
-    version="0.1.5rc1",
+    name="microservice_chassis_grupo2",
+    version="0.1.5rc2",
     packages=find_packages(),
     install_requires=[],
     author="Grupo 2",
