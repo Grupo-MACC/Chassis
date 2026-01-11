@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="microservice_chassis_grupo2_cc",
-    version="0.1.4",
+    version="0.1.5rc1",
     packages=find_packages(),
     install_requires=[],
     author="Grupo 2",
