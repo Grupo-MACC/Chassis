@@ -7,16 +7,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-async def get_database_url():
-    """Get database URL from Consul or fallback to environment variable."""
-    print("[DATABASE] Starting get_database_url()")
-    
-    db_user = os.getenv('DB_USER', 'admin')
-    db_password = os.getenv('DB_PASSWORD', 'maccadmin')
-    db_name = os.getenv('DB_NAME')
-    
+async def get_database_url() -> str:
+    """Devuelve la URL de base de datos con fallback robusto."""
+    env_url = os.getenv("SQLALCHEMY_DATABASE_URL")
+    if env_url:
+        logger.info("Using SQLALCHEMY_DATABASE_URL from env")
+        return env_url
+
+    db_name = os.getenv("DB_NAME")
     if not db_name:
-        raise ValueError("DB_NAME environment variable is required")
+        fallback = "sqlite+aiosqlite:///./default.db"
+        logger.warning("DB_NAME not set. Using fallback sqlite: %s", fallback)
+        return fallback
     
     print(f"[DATABASE] Using DB_NAME: {db_name}")
     
