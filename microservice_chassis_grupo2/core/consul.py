@@ -7,45 +7,6 @@ class ConsulClient:
         self.host = host
         self.port = port
         self.base_url = f"http://{host}:{port}/v1"
-    
-    async def _register_service(
-        self,
-        service_name: str,
-        service_id: str,
-        service_port: int,
-        service_address: str,
-        tags: list,
-        meta: dict
-    ) -> bool:
-        
-        payload = {
-            "ID": service_id,
-            "Name": service_name,
-            "Address": service_address,
-            "Port": service_port,
-            "Tags": tags or [],
-            "Meta": meta or {},
-        }
-        
-        payload["Check"] = {
-            "HTTP": f"http://{service_address}:{service_port}/docs",
-            "Interval": "10s", 
-            "Timeout": "5s"
-        }
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.put(
-                    f"{self.base_url}/agent/service/register",
-                    json=payload,
-                    timeout=10.0
-                )
-                if response.status_code == 200:
-                    return True
-                else:
-                    return False
-        except Exception as e:
-            return False
 
     async def deregister_service(
         self,
