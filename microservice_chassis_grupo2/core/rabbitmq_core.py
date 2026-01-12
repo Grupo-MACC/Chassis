@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import ssl
+import inspect
 from aio_pika import connect_robust, ExchangeType
 
 from microservice_chassis_grupo2.core.config import settings
@@ -53,19 +54,29 @@ def _build_ssl_context() -> ssl.SSLContext | None:
 
 async def _connect(url: str, ssl_ctx: ssl.SSLContext | None):
     """
-    Conecta con tolerancia a diferencias de firma entre versiones de aio-pika/aiormq.
+    Abre conexión robusta a RabbitMQ con TLS correctamente aplicado.
 
-    Motivación:
-        En algunos entornos `connect_robust(..., ssl=ctx)` es válido,
-        en otros requiere `ssl=True, ssl_options=ctx`.
+    Reglas:
+        - Sin TLS -> connect_robust(url)
+        - Con TLS:
+            * Si existe parámetro `ssl_options`, usar: ssl=True, ssl_options=ssl_ctx
+            * Si no existe, intentar: ssl=ssl_ctx (modo antiguo)
     """
     if ssl_ctx is None:
         return await connect_robust(url)
 
-    try:
-        return await connect_robust(url, ssl=ssl_ctx)
-    except TypeError:
+    params = inspect.signature(connect_robust).parameters
+
+    # ✅ Camino preferido en versiones modernas
+    if "ssl_options" in params:
         return await connect_robust(url, ssl=True, ssl_options=ssl_ctx)
+
+    # ✅ Camino alternativo (versiones antiguas)
+    if "ssl" in params:
+        return await connect_robust(url, ssl=ssl_ctx)
+
+    # Último recurso (muy raro)
+    return await connect_robust(url, ssl=True)
 
 
 async def get_channel():
