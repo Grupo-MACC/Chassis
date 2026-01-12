@@ -12,42 +12,45 @@ from __future__ import annotations
 import os
 import ssl
 import inspect
+import logging
+import hashlib
 from aio_pika import connect_robust, ExchangeType
 
 from microservice_chassis_grupo2.core.config import settings
 
+logger = logging.getLogger(__name__)
+
+# Ruta al public key para verificar JWTs
 PUBLIC_KEY_PATH = os.getenv("PUBLIC_KEY_PATH", "auth_public.pem")
 
 
-def _build_ssl_context() -> ssl.SSLContext | None:
+def _build_ssl_context() -> ssl.SSLContext:
     """
-    Crea un SSLContext para AMQPS.
+    Construye un SSLContext que CONFÍA en la CA del proyecto.
 
-    Requisitos (sin mTLS):
-        - RABBITMQ_TLS_CA_FILE debe apuntar al ca.pem que firmó el cert del servidor.
+    Reglas:
+        - La CA debe estar en /certs/ca.pem (o en RABBITMQ_TLS_CA_FILE).
+        - Si la CA no existe o no se puede cargar, se lanza excepción (fail-fast).
     """
-    if not settings.RABBITMQ_USE_TLS:
-        return None
+    ca_file = os.getenv("RABBITMQ_TLS_CA_FILE", "/certs/ca.pem").strip() or "/certs/ca.pem"
 
-    ca_file = os.getenv("RABBITMQ_TLS_CA_FILE", "").strip()
-    if not ca_file:
-        raise RuntimeError(
-            "RABBITMQ_USE_TLS=1 pero falta RABBITMQ_TLS_CA_FILE "
-            "(ej: /certs/ca.pem)."
-        )
-    if not os.path.exists(ca_file):
-        raise RuntimeError(f"No existe el CA file: {ca_file}")
+    if not os.path.isfile(ca_file):
+        raise FileNotFoundError(f"No existe el CA file para RabbitMQ TLS: {ca_file}")
 
-    ctx = ssl.create_default_context(
-        purpose=ssl.Purpose.SERVER_AUTH,
-        cafile=ca_file,
+    # Log útil (sin exponer secretos)
+    ca_bytes = open(ca_file, "rb").read()
+    logger.info(
+        "[RABBITMQ TLS] Usando CA file: %s (sha256=%s bytes=%s)",
+        ca_file,
+        hashlib.sha256(ca_bytes).hexdigest(),
+        len(ca_bytes),
     )
 
-    # Mínimo razonable para entrega
-    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    # create_default_context(cafile=...)
+    ctx = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_file)
 
-    # Con tu cert CN=rabbitmq y RABBITMQ_HOST=rabbitmq, esto debe pasar.
-    ctx.check_hostname = True
+    # Opcional: endurecer versión mínima (sin romper TLSv1.3)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
 
     return ctx
 
@@ -83,7 +86,8 @@ async def get_channel():
     """
     Devuelve (connection, channel) listo para declarar colas/exchanges.
     """
-    ssl_ctx = _build_ssl_context()
+    use_tls = os.getenv("RABBITMQ_USE_TLS", "0").strip().lower() in {"1", "true", "yes", "on"}
+    ssl_ctx = _build_ssl_context() if use_tls else None
     connection = await _connect(settings.RABBITMQ_HOST, ssl_ctx)
     channel = await connection.channel()
     return connection, channel
