@@ -14,6 +14,7 @@ import ssl
 import inspect
 import logging
 import hashlib
+import aiormq
 from aio_pika import connect_robust, ExchangeType
 
 from microservice_chassis_grupo2.core.config import settings
@@ -24,56 +25,45 @@ logger = logging.getLogger(__name__)
 PUBLIC_KEY_PATH = os.getenv("PUBLIC_KEY_PATH", "auth_public.pem")
 
 
-def _build_ssl_context() -> ssl.SSLContext | None:
+def _build_ssl_context() -> ssl.SSLContext:
     """
-    Crea un SSLContext para AMQPS usando SIEMPRE la CA del proyecto.
-
-    Reglas:
-        - Si RABBITMQ_USE_TLS no está activo -> None.
-        - La CA se obtiene de RABBITMQ_TLS_CA_FILE; si no existe, usa /certs/ca.pem.
-        - Si el fichero no existe o no se puede cargar -> excepción (fail-fast).
+    Construye el contexto TLS para verificar RabbitMQ con CA interna.
     """
-    if not getattr(settings, "RABBITMQ_USE_TLS", False):
-        return None
+    ca_file = os.getenv("RABBITMQ_TLS_CA_FILE", "/certs/ca.pem")
 
-    ca_file = os.getenv("RABBITMQ_TLS_CA_FILE", "/certs/ca.pem").strip() or "/certs/ca.pem"
-
-    if not os.path.isfile(ca_file):
-        raise FileNotFoundError(f"[RABBITMQ TLS] No existe CA file: {ca_file}")
-
-    ca_bytes = open(ca_file, "rb").read()
-    logger.info(
-        "[RABBITMQ TLS] CA file=%s sha256=%s bytes=%s",
-        ca_file,
-        hashlib.sha256(ca_bytes).hexdigest(),
-        len(ca_bytes),
+    ctx = ssl.create_default_context(
+        purpose=ssl.Purpose.SERVER_AUTH,
+        cafile=ca_file,
     )
 
-    # ✅ EXACTAMENTE como tu prueba que funciona
-    ctx = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_file)
+    # TLS mínimo
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+
+    # Verifica CA, pero sin hostname (evita SAN issues)
+    ctx.verify_mode = ssl.CERT_REQUIRED
+    ctx.check_hostname = False
+
     return ctx
 
 
 async def _connect(url: str, ssl_ctx: ssl.SSLContext | None):
-    """
-    Conecta con aio-pika aplicando TLS de forma compatible.
-
-    Estrategia:
-        1) Intentar ssl=SSLContext (lo que suele consumir aiormq directamente).
-        2) Si TypeError -> intentar ssl=True + ssl_options=SSLContext.
-        3) Si vuelve a fallar -> re-lanzar.
-    """
+    """Conecta con aio-pika aplicando TLS de forma compatible entre versiones."""
     if ssl_ctx is None:
         return await connect_robust(url)
 
-    # 1) ✅ Primer intento: pasar el contexto por `ssl`
+    # Intento 1: estilo moderno
     try:
         return await connect_robust(url, ssl=ssl_ctx)
     except TypeError:
+        # Signature antigua
         pass
+    except aiormq.exceptions.AMQPConnectionError as e:
+        # Si es error de verificación TLS, probamos el otro estilo
+        msg = str(e)
+        if "CERTIFICATE_VERIFY_FAILED" not in msg:
+            raise
 
-    # 2) Fallback: ssl=True + ssl_options
+    # Intento 2: estilo compatible
     return await connect_robust(url, ssl=True, ssl_options=ssl_ctx)
 
 
