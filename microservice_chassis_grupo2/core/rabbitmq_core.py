@@ -24,62 +24,57 @@ logger = logging.getLogger(__name__)
 PUBLIC_KEY_PATH = os.getenv("PUBLIC_KEY_PATH", "auth_public.pem")
 
 
-def _build_ssl_context() -> ssl.SSLContext:
+def _build_ssl_context() -> ssl.SSLContext | None:
     """
-    Construye un SSLContext que CONFÍA en la CA del proyecto.
+    Crea un SSLContext para AMQPS usando SIEMPRE la CA del proyecto.
 
     Reglas:
-        - La CA debe estar en /certs/ca.pem (o en RABBITMQ_TLS_CA_FILE).
-        - Si la CA no existe o no se puede cargar, se lanza excepción (fail-fast).
+        - Si RABBITMQ_USE_TLS no está activo -> None.
+        - La CA se obtiene de RABBITMQ_TLS_CA_FILE; si no existe, usa /certs/ca.pem.
+        - Si el fichero no existe o no se puede cargar -> excepción (fail-fast).
     """
+    if not getattr(settings, "RABBITMQ_USE_TLS", False):
+        return None
+
     ca_file = os.getenv("RABBITMQ_TLS_CA_FILE", "/certs/ca.pem").strip() or "/certs/ca.pem"
 
     if not os.path.isfile(ca_file):
-        raise FileNotFoundError(f"No existe el CA file para RabbitMQ TLS: {ca_file}")
+        raise FileNotFoundError(f"[RABBITMQ TLS] No existe CA file: {ca_file}")
 
-    # Log útil (sin exponer secretos)
     ca_bytes = open(ca_file, "rb").read()
     logger.info(
-        "[RABBITMQ TLS] Usando CA file: %s (sha256=%s bytes=%s)",
+        "[RABBITMQ TLS] CA file=%s sha256=%s bytes=%s",
         ca_file,
         hashlib.sha256(ca_bytes).hexdigest(),
         len(ca_bytes),
     )
 
-    # create_default_context(cafile=...)
+    # ✅ EXACTAMENTE como tu prueba que funciona
     ctx = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_file)
-
-    # Opcional: endurecer versión mínima (sin romper TLSv1.3)
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-
     return ctx
 
 
 async def _connect(url: str, ssl_ctx: ssl.SSLContext | None):
     """
-    Abre conexión robusta a RabbitMQ con TLS correctamente aplicado.
+    Conecta con aio-pika aplicando TLS de forma compatible.
 
-    Reglas:
-        - Sin TLS -> connect_robust(url)
-        - Con TLS:
-            * Si existe parámetro `ssl_options`, usar: ssl=True, ssl_options=ssl_ctx
-            * Si no existe, intentar: ssl=ssl_ctx (modo antiguo)
+    Estrategia:
+        1) Intentar ssl=SSLContext (lo que suele consumir aiormq directamente).
+        2) Si TypeError -> intentar ssl=True + ssl_options=SSLContext.
+        3) Si vuelve a fallar -> re-lanzar.
     """
     if ssl_ctx is None:
         return await connect_robust(url)
 
-    params = inspect.signature(connect_robust).parameters
-
-    # ✅ Camino preferido en versiones modernas
-    if "ssl_options" in params:
-        return await connect_robust(url, ssl=True, ssl_options=ssl_ctx)
-
-    # ✅ Camino alternativo (versiones antiguas)
-    if "ssl" in params:
+    # 1) ✅ Primer intento: pasar el contexto por `ssl`
+    try:
         return await connect_robust(url, ssl=ssl_ctx)
+    except TypeError:
+        pass
 
-    # Último recurso (muy raro)
-    return await connect_robust(url, ssl=True)
+    # 2) Fallback: ssl=True + ssl_options
+    return await connect_robust(url, ssl=True, ssl_options=ssl_ctx)
 
 
 async def get_channel():
