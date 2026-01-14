@@ -13,8 +13,7 @@ import os
 import ssl
 import inspect
 import logging
-import hashlib
-import aiormq
+from aio_pika.exceptions import AMQPConnectionError
 from aio_pika import connect_robust, ExchangeType
 
 from microservice_chassis_grupo2.core.config import settings
@@ -25,57 +24,98 @@ logger = logging.getLogger(__name__)
 PUBLIC_KEY_PATH = os.getenv("PUBLIC_KEY_PATH", "auth_public.pem")
 
 
+def _env_bool(name: str, default: str = "0") -> bool:
+    """
+    Convierte una variable de entorno a bool de forma tolerante.
+
+    Acepta: 1/true/yes/on/y (case-insensitive).
+    """
+    val = os.getenv(name, default)
+    return str(val).strip().lower() in {"1", "true", "yes", "on", "y"}
+
+
 def _build_ssl_context() -> ssl.SSLContext:
     """
-    Construye el contexto TLS para verificar RabbitMQ con CA interna.
+    Construye un SSLContext para TLS simple (server-auth).
+
+    Requisitos:
+        - RABBITMQ_TLS_CA_FILE debe apuntar al CA que firmó el cert del servidor RabbitMQ.
+        - No se carga cert/key de cliente (NO mTLS).
+
+    Decisiones:
+        - TLSv1.2+.
+        - check_hostname=False para evitar problemas típicos de CN/SAN en entornos docker.
+          (Si tus certs están bien con SAN, puedes ponerlo True sin problema.)
     """
     ca_file = os.getenv("RABBITMQ_TLS_CA_FILE", "/certs/ca.pem")
 
-    ctx = ssl.create_default_context(
-        purpose=ssl.Purpose.SERVER_AUTH,
-        cafile=ca_file,
-    )
+    if not os.path.exists(ca_file):
+        raise FileNotFoundError(f"CA file no encontrado: {ca_file}")
 
-    # TLS mínimo
+    ctx = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH, cafile=ca_file)
     ctx.minimum_version = ssl.TLSVersion.TLSv1_2
-
-    # Verifica CA, pero sin hostname (evita SAN issues)
-    ctx.verify_mode = ssl.CERT_REQUIRED
     ctx.check_hostname = False
+
+    # Verificación estricta del servidor (lo normal en TLS simple)
+    ctx.verify_mode = ssl.CERT_REQUIRED
 
     return ctx
 
 
 async def _connect(url: str, ssl_ctx: ssl.SSLContext | None):
-    """Conecta con aio-pika aplicando TLS de forma compatible entre versiones."""
+    """
+    Conecta con aio-pika de forma robusta.
+
+    Estrategia:
+        - Si no hay TLS (ssl_ctx is None): conexión normal.
+        - Si hay TLS: pasar el SSLContext usando el parámetro correcto
+          para la versión de aio-pika instalada.
+
+    Compatibilidad:
+        - Algunas versiones soportan `ssl_context=SSLContext`.
+        - Otras usan `ssl=True` + `ssl_options` (dict u objeto SSLOptions).
+    """
     if ssl_ctx is None:
         return await connect_robust(url)
 
-    # Intento 1: estilo moderno
-    try:
-        return await connect_robust(url, ssl=ssl_ctx)
-    except TypeError:
-        # Signature antigua
-        pass
-    except aiormq.exceptions.AMQPConnectionError as e:
-        # Si es error de verificación TLS, probamos el otro estilo
-        msg = str(e)
-        if "CERTIFICATE_VERIFY_FAILED" not in msg:
-            raise
+    sig = inspect.signature(connect_robust)
+    params = sig.parameters
 
-    # Intento 2: estilo compatible
-    return await connect_robust(url, ssl=True, ssl_options=ssl_ctx)
+    # Opción 1 (preferida): ssl_context=
+    if "ssl_context" in params:
+        return await connect_robust(url, ssl_context=ssl_ctx)
+
+    # Opción 2: ssl=True + ssl_options=dict(...)
+    if "ssl_options" in params:
+        # Para aiormq, suele funcionar pasando el contexto dentro de ssl_options.
+        # Si tu versión exige keys tipo cafile/certfile/keyfile,
+        # aquí también podrías pasar {"cafile": "..."} en vez de context.
+        return await connect_robust(url, ssl=True, ssl_options={"context": ssl_ctx})
+
+    # Último recurso: algunas versiones aceptan ssl como contexto
+    return await connect_robust(url, ssl=ssl_ctx)
 
 
 async def get_channel():
     """
-    Devuelve (connection, channel) listo para declarar colas/exchanges.
+    Devuelve (connection, channel) listo para usar.
+
+    Nota profesional:
+        - Abrir/cerrar conexión por cada publish es caro.
+          Para producción, lo suyo es pool o conexión global por proceso.
+        - Aquí mantengo tu contrato actual por compatibilidad.
     """
-    use_tls = os.getenv("RABBITMQ_USE_TLS", "0").strip().lower() in {"1", "true", "yes", "on"}
+    use_tls = _env_bool("RABBITMQ_USE_TLS", "0")
+
     ssl_ctx = _build_ssl_context() if use_tls else None
-    connection = await _connect(settings.RABBITMQ_HOST, ssl_ctx)
-    channel = await connection.channel()
-    return connection, channel
+
+    try:
+        connection = await _connect(settings.RABBITMQ_HOST, ssl_ctx)
+        channel = await connection.channel()
+        return connection, channel
+    except AMQPConnectionError as e:
+        # Re-lanzamos con contexto útil (no lo escondas con un fallback “mágico”).
+        raise RuntimeError(f"RabbitMQ connection failed (TLS={use_tls}) to {settings.RABBITMQ_HOST}: {e}") from e
 
 
 async def declare_exchange(channel):
