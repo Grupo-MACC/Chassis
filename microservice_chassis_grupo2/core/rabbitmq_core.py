@@ -144,6 +144,22 @@ async def declare_exchange_saga(channel):
         durable=True,
     )
 
+async def declare_exchange_saga_cancelation_commands(channel):
+    """Declara el exchange de comandos (command)."""
+    return await channel.declare_exchange(
+        settings.EXCHANGE_NAME_SAGA_CANCEL_CMD,
+        ExchangeType.TOPIC,
+        durable=True,
+    )
+
+
+async def declare_exchange_saga_cancelation_events(channel):
+    """Declara el exchange de saga (saga)."""
+    return await channel.declare_exchange(
+        settings.EXCHANGE_NAME_SAGA_CANCEL_EVT,
+        ExchangeType.TOPIC,
+        durable=True,
+    )
 
 async def declare_exchange_logs(channel):
     """

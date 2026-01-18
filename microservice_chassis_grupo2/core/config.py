@@ -40,6 +40,8 @@ class Settings:
     EXCHANGE_NAME_COMMAND = "command"
     EXCHANGE_NAME_SAGA = "saga"
     EXCHANGE_NAME_LOGS = "logs"
+    EXCHANGE_NAME_SAGA_CANCEL_CMD = "saga_cancel_cmd"
+    EXCHANGE_NAME_SAGA_CANCEL_EVT = "saga_cancel_evt"
 
     # --- RabbitMQ base ---
     RABBITMQ_USER = os.getenv("RABBITMQ_USER", "guest")
