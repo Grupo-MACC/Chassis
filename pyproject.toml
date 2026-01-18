@@ -1,0 +1,31 @@
+# pyproject.toml
+[build-system]
+requires = [
+  "setuptools>=69",
+  "wheel",
+  "setuptools_scm[toml]>=8"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "microservice_chassis_grupo2"
+dynamic = ["version"]
+description = "A reusable library for microservices"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Grupo 2" }]
+urls = { "Homepage" = "https://github.com/Grupo-MACC/Chassis" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["microservice_chassis_grupo2*"]
+
+[tool.setuptools_scm]
+version_scheme = "no-guess-dev"
+local_scheme = "no-local-version"
+
+# Acepta tags tipo v0.1.9, v0.1.5rc10, v1.2.3
+tag_regex = "^(?:v)?(?P<version>\\d+\\.\\d+\\.\\d+(?:(?:a|b|rc)\\d+)?)$"
+
+# Escribe versión dentro del paquete (evita problemas al construir desde sdist)
+write_to = "microservice_chassis_grupo2/_version.py"
