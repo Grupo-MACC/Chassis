@@ -44,7 +44,12 @@ class ConsulClient:
                             "address": service.get("ServiceAddress") or service.get("Address"),
                             "port": service.get("ServicePort"),
                         }
+                else:
+                    with open("/home/pyuser/code/log_consul.txt", "a") as f:
+                        f.write(f"Consul response code: {response.status_code}\n")
         except Exception as e:
+            with open("/home/pyuser/code/log_consul.txt", "a") as f:
+                f.write(f"Consul error: {type(e).__name__}: {str(e)}\n")
             return None
 
 _consul_client = None
