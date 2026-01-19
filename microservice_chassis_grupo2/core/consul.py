@@ -53,7 +53,7 @@ def create_consul_client() -> ConsulClient:
     global _consul_client
     if _consul_client is None:
         host = os.getenv("CONSUL_HOST", "localhost")
-        port = int(os.getenv("CONSUL_PORT", 8500))
+        port = int(os.getenv("CONSUL_PORT", 8501))
         _consul_client = ConsulClient(host, port)
     return _consul_client
 
@@ -78,4 +78,4 @@ async def get_service_url(service_name: str, default_url: str = None) -> str:
     if default_url:
         return default_url
 
-    raise Exception(f"Could not discover service: {service_name}")
+    raise Exception(f"Could not discover service: {e}")
