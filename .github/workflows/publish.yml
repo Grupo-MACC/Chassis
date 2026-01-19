@@ -3,7 +3,9 @@ name: Build and Publish to PyPI
 on:
   push:
     branches:
+      - cc_prod
       - cc
+      - main
 
 jobs:
   build:
