@@ -58,24 +58,29 @@ def create_consul_client() -> ConsulClient:
     return _consul_client
 
 async def get_service_url(service_name: str, default_url: str = None) -> str:
-    """Get service URL from Consul with retry and fallback."""
     consul_client = create_consul_client()
     max_retries = 5
     retry_delay = 1
+    last_error: Exception | None = None
 
     for attempt in range(max_retries):
         try:
             service_info = await consul_client.discover_service(service_name)
             if service_info:
-                url = f"https://{service_info['address']}:{service_info['port']}"
-                return url
+                return f"https://{service_info['address']}:{service_info['port']}"
         except Exception as e:
-            pass
+            last_error = e
+
         if attempt < max_retries - 1:
             await asyncio.sleep(retry_delay)
 
-    # Fallback to default
     if default_url:
         return default_url
 
-    raise Exception(f"Could not discover service: {e.__class__.__name__}: {str(e)}")
+    if last_error:
+        raise RuntimeError(
+            f"Could not discover service '{service_name}': "
+            f"{last_error.__class__.__name__}: {last_error}"
+        )
+
+    raise RuntimeError(f"Could not discover service '{service_name}': no instances found")
