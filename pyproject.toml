@@ -8,7 +8,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "microservice_chassis_grupo2"
+name = "microservice_chassis_grupo2_cc_prod"
 dynamic = ["version"]
 description = "A reusable library for microservices"
 readme = "README.md"
