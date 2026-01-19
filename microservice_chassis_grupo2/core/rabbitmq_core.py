@@ -27,17 +27,6 @@ PUBLIC_KEY_PATH = os.getenv("PUBLIC_KEY_PATH", "auth_public.pem")
 
 ssm = SSMSecrets(region=os.getenv("AWS_REGION", "us-east-1"))
 
-async def get_channel():
-    service_url = await get_service_url("rabbitmq")
-    if service_url:
-        address = service_url.split("//")[1].split(":")[0]
-        port = service_url.split(":")[2]
-        rabbitmq_url = f"amqp://{settings.RABBITMQ_USER}:{ssm.get_parameter('/infrastructure/dev/rabbitmq/password')}@{address}:{port}/"
-        connection = await connect_robust(rabbitmq_url)
-    channel = await connection.channel()
-    
-    return connection, channel
-
 def _env_bool(name: str, default: str = "0") -> bool:
     """
     Convierte una variable de entorno a bool de forma tolerante.
@@ -119,17 +108,23 @@ async def get_channel():
           Para producción, lo suyo es pool o conexión global por proceso.
         - Aquí mantengo tu contrato actual por compatibilidad.
     """
-    use_tls = _env_bool("RABBITMQ_USE_TLS", "0")
 
-    ssl_ctx = _build_ssl_context() if use_tls else None
+    ssl_ctx = _build_ssl_context()
+    
 
     try:
-        connection = await _connect(settings.RABBITMQ_HOST, ssl_ctx)
+        service_url = await get_service_url("rabbitmq")
+        if service_url:
+            address = service_url.split("//")[1].split(":")[0]
+            port = service_url.split(":")[2]
+            #rabbitmq_url = f"amqp://{settings.RABBITMQ_USER}:{ssm.get_parameter('/infrastructure/dev/rabbitmq/password')}@{address}:{port}/"
+            rabbitmq_url = f"amqp://{settings.RABBITMQ_USER}:guest@{address}:{port}/"
+        connection = await _connect(rabbitmq_url, ssl_ctx)
         channel = await connection.channel()
         return connection, channel
     except AMQPConnectionError as e:
         # Re-lanzamos con contexto útil (no lo escondas con un fallback “mágico”).
-        raise RuntimeError(f"RabbitMQ connection failed (TLS={use_tls}) to {settings.RABBITMQ_HOST}: {e}") from e
+        raise RuntimeError(f"RabbitMQ connection failed (TLS={ssl_ctx is not None}) to {rabbitmq_url}: {e}") from e
 
 
 async def declare_exchange(channel):
