@@ -34,6 +34,7 @@ class ConsulClient:
                 response = await client.get(
                     f"{self.base_url}/catalog/service/{service_name}",
                     timeout=10.0,
+                    verify=False
                 )
                 if response.status_code == 200:
                     services = response.json()
