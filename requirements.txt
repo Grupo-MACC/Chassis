@@ -6,3 +6,4 @@ fastapi
 cryptography
 sqlalchemy
 aio_pika
+boto3
