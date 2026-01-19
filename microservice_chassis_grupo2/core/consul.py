@@ -6,7 +6,7 @@ class ConsulClient:
     def __init__(self, host: str, port: str):
         self.host = host
         self.port = port
-        self.base_url = f"http://{host}:{port}/v1"
+        self.base_url = f"https://{host}:{port}/v1"
 
     async def deregister_service(
         self,
@@ -66,7 +66,7 @@ async def get_service_url(service_name: str, default_url: str = None) -> str:
         try:
             service_info = await consul_client.discover_service(service_name)
             if service_info:
-                url = f"http://{service_info['address']}:{service_info['port']}"
+                url = f"https://{service_info['address']}:{service_info['port']}"
                 return url
         except Exception as e:
             pass
