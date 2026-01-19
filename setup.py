@@ -15,7 +15,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="microservice_chassis_grupo2_cc_prod",
-    version="0.1.0",
+    version="0.1.1",
     packages=find_packages(),
     use_scm_version=True,  # <-- clave: versión por tags
     description="A reusable library for microservices",
