@@ -9,15 +9,30 @@ auth_scheme = HTTPBearer()
 
 # Database #########################################################################################
 async def get_db():
-    """Generates database sessions and closes them when finished."""
-    from microservice_chassis_grupo2.sql.database import SessionLocal
-    logger.debug("Getting database SessionLocal")
+    """Genera sesiones de BD y las cierra al terminar.
+
+    Nota:
+        - init_database() es idempotente: si ya se inicializó, no repite trabajo.
+        - Se mantiene commit/rollback automático como en tu implementación original.
+    """
+    from microservice_chassis_grupo2.sql.database import init_database, SessionLocal
+
+    # ✅ Asegura engine y SessionLocal listos antes de usarlos
+    await init_database()
+
+    if SessionLocal is None:
+        raise RuntimeError(
+            "SessionLocal no inicializada tras init_database(). "
+            "Revisa microservice_chassis_grupo2/sql/database.py"
+        )
+
     db = SessionLocal()
     try:
         yield db
         await db.commit()
-    except:
+    except Exception:
         await db.rollback()
+        raise
     finally:
         await db.close()
 
