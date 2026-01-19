@@ -23,14 +23,19 @@ from microservice_chassis_grupo2.core.secrets import SSMSecrets
 
 logger = logging.getLogger(__name__)
 
-ssm = SSMSecrets(region=os.getenv("AWS_REGION", "us-east-1"))
+try:
+    ssm = SSMSecrets(region=os.getenv("AWS_REGION", "us-east-1"))
+except Exception as e:
+    logger.error(f"Error initializing SSMSecrets: {type(e).__name__}: {str(e)}")
+    ssm = None  # Fallback si SSM no está disponible
 
 async def get_database_url():
     """Get database URL from Consul or fallback to environment variable."""
     print("[DATABASE] Starting get_database_url()")
     
     db_user = os.getenv('DB_USER', 'admin')
-    db_password = ssm.get_parameter('/infrastructure/dev/rds/password')
+    #db_password = ssm.get_parameter('/infrastructure/dev/rds/password')
+    db_password = os.getenv('DB_PASSWORD', 'maccadmin')
     db_name = os.getenv('DB_NAME')
     
     if not db_name:
