@@ -78,4 +78,4 @@ async def get_service_url(service_name: str, default_url: str = None) -> str:
     if default_url:
         return default_url
 
-    raise Exception(f"Could not discover service: {e}")
+    raise Exception(f"Could not discover service: {e.__class__.__name__}: {str(e)}")
