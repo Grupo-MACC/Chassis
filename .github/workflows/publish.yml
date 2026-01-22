@@ -6,6 +6,7 @@ on:
       - cc_prod
       - cc
       - main
+      - cc_prod_secrets
 
 jobs:
   build:

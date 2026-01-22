@@ -27,44 +27,6 @@ class SSMSecrets:
         except Exception as e:
             raise SecretsError(f"Error getting SSM parameter {name}: {e}")
 
-    def get_parameters_by_path(
-        self,
-        path: str,
-        recursive: bool = True,
-        decrypt: bool = True
-    ) -> Dict[str, str]:
-        """
-        Obtiene todos los parámetros bajo un path
-        Devuelve un dict {nombre_parametro: valor}
-        """
-        parameters = {}
-        next_token = None
-
-        try:
-            while True:
-                kwargs = {
-                    "Path": path,
-                    "Recursive": recursive,
-                    "WithDecryption": decrypt,
-                }
-                if next_token:
-                    kwargs["NextToken"] = next_token
-
-                response = self.client.get_parameters_by_path(**kwargs)
-
-                for param in response["Parameters"]:
-                    key = param["Name"].split("/")[-1]
-                    parameters[key] = param["Value"]
-
-                next_token = response.get("NextToken")
-                if not next_token:
-                    break
-
-            return parameters
-
-        except Exception as e:
-            raise SecretsError(f"Error getting SSM parameters by path {path}: {e}")
-
 
 class SecretsManager:
     def __init__(self, region: Optional[str] = None):
@@ -89,6 +51,58 @@ class SecretsManager:
             raise SecretsError(f"Secret not found: {secret_id}")
         except Exception as e:
             raise SecretsError(f"Error getting secret {secret_id}: {e}")
+
+    def create_secret(self, name: str, secret_value: str, description: str = "", overwrite: bool = False) -> str:
+        """
+        Crea un nuevo secreto en Secrets Manager
+        
+        Args:
+            name: Nombre del secreto
+            secret_value: Valor del secreto (string o JSON)
+            description: Descripción opcional del secreto
+            overwrite: Si es True, sobrescribe el secreto si ya existe
+        
+        Returns:
+            ARN del secreto creado o actualizado
+        
+        Raises:
+            SecretsError: Si el secreto ya existe (y overwrite=False) o hay error al crearlo
+        """
+        try:
+            response = self.client.create_secret(
+                Name=name,
+                SecretString=secret_value,
+                Description=description
+            )
+            return response["ARN"]
+        except self.client.exceptions.ResourceExistsException:
+            if overwrite:
+                return self.update_secret(name, secret_value)
+            raise SecretsError(f"Secret already exists: {name}")
+        except Exception as e:
+            raise SecretsError(f"Error creating secret {name}: {e}")
+
+    def update_secret(self, secret_id: str, secret_value: str) -> str:
+        """
+        Actualiza el valor de un secreto existente
+        
+        Args:
+            secret_id: Nombre o ARN del secreto
+            secret_value: Nuevo valor del secreto
+        
+        Returns:
+            ARN del secreto actualizado
+        """
+        try:
+            response = self.client.put_secret_value(
+                SecretId=secret_id,
+                SecretString=secret_value
+            )
+            return response["ARN"]
+        except self.client.exceptions.ResourceNotFoundException:
+            raise SecretsError(f"Secret not found: {secret_id}")
+        except Exception as e:
+            raise SecretsError(f"Error updating secret {secret_id}: {e}")
 
 
 class KMSService:

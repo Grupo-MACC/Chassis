@@ -117,8 +117,8 @@ async def get_channel():
         if service_url:
             address = service_url.split("//")[1].split(":")[0]
             port = service_url.split(":")[2]
-            #rabbitmq_url = f"amqp://{settings.RABBITMQ_USER}:{ssm.get_parameter('/infrastructure/dev/rabbitmq/password')}@{address}:{port}/"
-            rabbitmq_url = f"amqp://{settings.RABBITMQ_USER}:guest@{address}:{port}/"
+            rabbitmq_url = f"amqp://{settings.RABBITMQ_USER}:{ssm.get_parameter('/infrastructure/dev/rabbitmq/password')}@{address}:{port}/"
+            #rabbitmq_url = f"amqp://{settings.RABBITMQ_USER}:guest@{address}:{port}/"
         connection = await _connect(rabbitmq_url, ssl_ctx)
         channel = await connection.channel()
         return connection, channel

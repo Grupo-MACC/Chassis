@@ -34,8 +34,8 @@ async def get_database_url():
     print("[DATABASE] Starting get_database_url()")
     
     db_user = os.getenv('DB_USER', 'admin')
-    #db_password = ssm.get_parameter('/infrastructure/dev/rds/password')
-    db_password = os.getenv('DB_PASSWORD', 'maccadmin')
+    db_password = ssm.get_parameter('/infrastructure/dev/rds/password')
+    #db_password = os.getenv('DB_PASSWORD', 'maccadmin')
     db_name = os.getenv('DB_NAME')
     
     if not db_name:
